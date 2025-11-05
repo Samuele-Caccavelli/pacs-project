@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.ipynb
+
+dodlib.*
+
+*.npz
+*.pt
+*.xml
+
+*.md
+*.txt
+*.csv
+*.png
+*.gif
