@@ -5,6 +5,7 @@ import torch
 from tqdm import tqdm
 import numpy as np
 from scipy.optimize import minimize
+from scipy.optimize import minimize_scalar
 import random
 
 
@@ -23,19 +24,19 @@ def Frobenius_metric(V1, V2):
     """Compute the Frobenius distance between the projection matrices associated with two basis.
 
     The metric is defined as:
-        d = || V₁V₁ᵀ - V₂V₂ᵀ ||_F
+        d = || V₁ᵀV₁ - V₂ᵀV₂ ||_F
     where ||·||_F denotes the Frobenius norm.
 
     Input:
-            V1              (torch.Tensor)              First basis matrix.
+            V1              (torch.Tensor)              First basis matrix of size (n_basis, nA).
             V2              (torch.Tensor)              Second basis matrix.
 
     Output:
             (torch.Tensor) Scalar tensor representing the Frobenius distance.
     """
 
-    projection1 = torch.matmul(V1, torch.t(V1))
-    projection2 = torch.matmul(V2, torch.t(V2))
+    projection1 = torch.matmul(torch.t(V1), V1)
+    projection2 = torch.matmul(torch.t(V2), V2)
 
     return torch.norm(projection1-projection2, p='fro')
 
@@ -134,29 +135,16 @@ class LocalBasis():
             ##! but in this way we are doing the checks at the start of self.K_h_j each time the optimization algorithm
             ##! calls this function
             # Attention here: we need to return (-K_h_j)
-            return -(self.K_h_j(j, theta_hat, h[0]))
+            return -(self.K_h_j(j, theta_hat, h))
 
-        # def constraint1(h):
-        #     return h + theta_hat[j].item()
+        # Define bounds directly
+        lower_bound = -theta_hat[j].item()
+        upper_bound = 1 - theta_hat[j].item()
 
-        # def constraint2(h):
-        #     return 1-h-theta_hat[j].item()
-
-        # constraints = [
-        #     {'type': 'ineq', 'fun': constraint1},
-        #     {'type': 'ineq', 'fun': constraint2}
-        # ]
-
-        bounds = [(-theta_hat[j].item(), 1 - theta_hat[j].item())]
-
-        # h0 is the medium point between [-theta_hat[j], 1-theta_hat[j]]
-        h0 = np.array(0.5 - theta_hat[j].item())
-
-        # result = minimize(objective, h0, constraints=constraints, method="SQLSQP")
-        result = minimize(objective, h0, bounds=bounds, method="Powell")
-
-        print("The optimizer had success? ", result.success, " and it said ", result.message)
-        print("At h = ", result.x, " the values is " , result.fun)
+        # Use minimize_scalar with bounded method
+        result = minimize_scalar(objective, 
+                                bounds=(lower_bound, upper_bound), 
+                                method='bounded')
 
         # We are interested in the maximum, so we return (-minimum)
         return -result.fun
@@ -166,7 +154,7 @@ class LocalBasis():
     def __K_sup_j_tot(self, j, S, verbose, theta_dataset):
         sum = 0
 
-        if(theta_dataset == None):
+        if(theta_dataset is None):
             print(S, "random values of the parameters will be generated for the Monte Carlo estimate")
             theta_dataset = torch.rand(S, self.q)
 
@@ -188,7 +176,7 @@ class LocalBasis():
     def __K_h_j_tot(self, j, h, S, verbose, theta_dataset):
         sum = 0
 
-        if(theta_dataset == None):
+        if(theta_dataset is None):
             print(S, "random values of the parameters will be generated for the Monte Carlo estimate")
             theta_dataset = torch.rand(S, self.q)
 
@@ -216,7 +204,7 @@ class LocalBasis():
     # Public method
     # Wrapper for the two private methods
     def K_j_tot(self, j, h=None, S=1000, verbose = False, theta_dataset = None):
-        if(h==None):
+        if(h is None):
             return self.__K_sup_j_tot(j, S, verbose, theta_dataset)
         return self.__K_h_j_tot(j, h, S, verbose, theta_dataset)
 

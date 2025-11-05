@@ -22,7 +22,7 @@ def omega_weights(theta, theta_i, lambda_penalty = 1e-2, pbad_index_list=None):
     Output:
             (float) Exponentially decaying weight.
     """
-    if(pbad_index_list == None):
+    if(pbad_index_list is None):
         pbad_index_list = list(range(theta.size(0)))
     
     return np.exp((-euclidean(theta[pbad_index_list]-theta_i[pbad_index_list], squared=True)/lambda_penalty**2).item())
@@ -151,10 +151,10 @@ def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figs
     # n1 is the number of that_i for which the singular values have been computed
     # n2 = min(nA, n1) with nA = number of basis of the ambient space
 
-    if(N_max==None):
+    if(N_max is None):
         N_max = s_values.shape[1]
 
-    if(n_trajectories==None):
+    if(n_trajectories is None):
         n_trajectories = s_values.shape[0]
 
     relative_diff = (s_values[:, :-1] - s_values[:, 1:])/s_values[:, :-1]
