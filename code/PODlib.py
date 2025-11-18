@@ -99,6 +99,7 @@ class weighted_POD:
         Output:
                 (torch.Tensor) Basis related to a specific theta. If `trainable` is set to True, the basis returned refers to the ambient space, otherwise it refers to the full space.
         """
+        #! modify to say this support multiple theta as input
         if(theta.ndim == 1):
             out = self.compute_space(theta)
             out = torch.t(out)

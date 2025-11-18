@@ -29,6 +29,7 @@ def Frobenius_metric(V1, V2):
 
     Input:
             V1              (torch.Tensor)              First basis matrix of size (n_basis, nA).
+            #! how so have the size here
             V2              (torch.Tensor)              Second basis matrix.
 
     Output:
@@ -99,6 +100,8 @@ class LocalBasis():
         # So we first rescale it to be inside Θ * Θ', then we compute the basis
         params = self.scaling(theta)
         return self.module(params[self.pbad_index_list].unsqueeze(0)).squeeze()
+
+    # K_h APPROACH
 
     # Private method needed for K_h_j
     def __CheckH(self, theta_hat_j, h):
@@ -208,4 +211,40 @@ class LocalBasis():
             return self.__K_sup_j_tot(j, S, verbose, theta_dataset)
         return self.__K_h_j_tot(j, h, S, verbose, theta_dataset)
 
-    
+    # SENSITIVITY APPROACH
+
+    def __compute_spaces_variance(self, Vs):
+        l = len(Vs)
+
+        dist = 0.0
+        for i in range(l//2):
+            dist += Frobenius_metric(Vs[i], Vs[-i-1])
+
+        return (dist/2)/(l//2)
+
+    def sensitivity(self, m=30, l=20):
+        # m is the number of different theta_k we will test
+        # l is the number of spaces we will compute for each theta_k
+
+        sensitivities = [] # one for each direction j
+        tot_var = 0.0
+
+        #! is it ok like this? Or is it better to save a batch of m*l theta, compute tot_var like that,
+        #! then take a batch of size l and modify it to compute the cond_var
+        tot_var = self.__compute_spaces_variance(self.module(torch.rand(m*l, self.q))).item()
+
+        for j in range(self.q):
+            cond_var = 0.0
+            variances = []
+            for _ in range(m):
+                th = torch.rand(1)
+                theta = torch.rand(l, self.q)
+                theta[:, self.pbad_index_list[j]] = th
+                Vs = self.module(theta)
+                variances.append(self.__compute_spaces_variance(Vs))
+            cond_var = np.mean(variances)
+            # we use this max if m and l are too small, the tot_var could end up beeing smaller then a cond_var
+            # so the sensitivity could end up being negative
+            sensitivities.append(max(0, 1 - cond_var/tot_var))
+
+        return sensitivities
