@@ -107,13 +107,13 @@ class weighted_POD:
         elif(theta.ndim == 2):
             return torch.stack([self.__call__(th) for th in theta], axis = 0)
         else:
-            raise RuntimeError("Wrong shape.")
+            raise RuntimeError("The input given as the wrong shape.")
 
     def singular_values(self):
         """Returns the singular values related to the basis computation of a specific theta. It refers to the singular values computed in the last call of `compute_space`.
 
         Output:
-                (ndarray) The singular values, sorted in non-increasing order.
+                (ndarray or None) The singular values, sorted in non-increasing order. Returns None if `compute_space` has not been called yet.
         """
         return self.__s_values
 
@@ -158,13 +158,6 @@ def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figs
     if(n_trajectories is None):
         n_trajectories = s_values.shape[0]
 
-    relative_diff = (s_values[:, :-1] - s_values[:, 1:])/s_values[:, :-1]
-
-    delta_n_mean = (relative_diff).mean(axis=0)
-    delta_n_min = (relative_diff).min(axis=0)
-    min_n = s_values.min(axis = 0)
-    max_n = s_values.max(axis = 0)
-
     x = np.arange(1, N_max+1)
 
     plots_to_show = []
@@ -186,6 +179,10 @@ def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figs
 
     for ax, plot_name in zip(axes, plots_to_show):
         if plot_name == 'delta':
+            relative_diff = (s_values[:, :-1] - s_values[:, 1:])/s_values[:, :-1]
+            delta_n_mean = (relative_diff).mean(axis=0)
+            delta_n_min = (relative_diff).min(axis=0)
+
             ax.loglog(x[:-1], delta_n_mean[:N_max-1], marker="o", color='orange', label='Mean')
             ax.loglog(x[:-1], delta_n_min[:N_max-1], marker="*", color='blue', label='Minimum')
             ax.legend()
@@ -193,6 +190,9 @@ def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figs
             ax.grid(True)
         
         elif plot_name == 'range':
+            min_n = s_values.min(axis = 0)
+            max_n = s_values.max(axis = 0)
+
             ax.fill_between(x, min_n[:N_max], max_n[:N_max], color='blue', alpha=0.2)
             ax.set_xscale('log')
             ax.set_yscale('log')
