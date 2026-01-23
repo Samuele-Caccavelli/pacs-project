@@ -44,6 +44,7 @@ def Frobenius_metric(V1, V2):
 class LocalBasis():
     """LocalBasis class, used for computing the quantity K via different methods.
     #! is it really called K?
+    #! add sensitivity
     
     Attributes:
             q               (int)                       Dimensions of the parameter space.
@@ -155,8 +156,6 @@ class LocalBasis():
     # Private method
     # Monte Carlo estimate of K_sup_j
     def __K_sup_j_tot(self, j, S, verbose, theta_dataset):
-        sum = 0
-
         if(theta_dataset is None):
             print(S, "random values of the parameters will be generated for the Monte Carlo estimate")
             theta_dataset = torch.rand(S, self.q)
@@ -167,8 +166,8 @@ class LocalBasis():
 
         K_vector = []
 
-        for iter in tqdm(range(S), disable=not verbose, desc="Monte Carlo Estimate progress"):
-            theta_hat = theta_dataset[iter]
+        for it in tqdm(range(S), disable=not verbose, desc="Monte Carlo Estimate progress"):
+            theta_hat = theta_dataset[it]
             value = self.K_sup_j(j, theta_hat)
             K_vector.append(value)
 
@@ -177,8 +176,6 @@ class LocalBasis():
     # Private method
     # Monte Carlo estimate of K_h_j
     def __K_h_j_tot(self, j, h, S, verbose, theta_dataset):
-        sum = 0
-
         if(theta_dataset is None):
             print(S, "random values of the parameters will be generated for the Monte Carlo estimate")
             theta_dataset = torch.rand(S, self.q)
@@ -189,14 +186,14 @@ class LocalBasis():
 
         K_vector = []
 
-        for iter in tqdm(range(S), disable=not verbose, desc="Monte Carlo Estimate progress"):
-            theta_hat = theta_dataset[iter]
+        for it in tqdm(range(S), disable=not verbose, desc="Monte Carlo Estimate progress"):
+            theta_hat = theta_dataset[it]
             
             # We transform the j component of theta_hat to ensure |h| < theta_hat[j] < 1-|h|, so that 
             # we won't have errors while computing K_h_j
             theta_hat[j] = theta_hat[j] * (1-2*abs(h)) + abs(h)
 
-            # We compute K_h_J 50% of the times in direction h, 50% in direction -h
+            # We compute K_h_j 50% of the times in direction h, 50% in direction -h
             if random.choice([True, False]):
                 K_vector.append(self.K_h_j(j, theta_hat, h))
             else:
@@ -218,7 +215,7 @@ class LocalBasis():
 
         dist = 0.0
         for i in range(l//2):
-            dist += Frobenius_metric(Vs[i], Vs[-i-1])
+            dist += self.metric(Vs[i], Vs[-i-1])
 
         return (dist/2)/(l//2)
 
@@ -231,16 +228,17 @@ class LocalBasis():
 
         #! is it ok like this? Or is it better to save a batch of m*l theta, compute tot_var like that,
         #! then take a batch of size l and modify it to compute the cond_var
-        tot_var = self.__compute_spaces_variance(self.module(torch.rand(m*l, self.q))).item()
+        tot_var = self.__compute_spaces_variance(self.module(self.scaling(torch.rand(m*l, self.q)))).item()
 
         for j in range(self.q):
             cond_var = 0.0
             variances = []
             for _ in range(m):
+                #! maybe add tqdm also here?
                 th = torch.rand(1)
                 theta = torch.rand(l, self.q)
                 theta[:, self.pbad_index_list[j]] = th
-                Vs = self.module(theta)
+                Vs = self.module(self.scaling(theta))
                 variances.append(self.__compute_spaces_variance(Vs))
             cond_var = np.mean(variances)
             # we use this max if m and l are too small, the tot_var could end up beeing smaller then a cond_var
