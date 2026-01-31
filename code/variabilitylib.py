@@ -1,13 +1,8 @@
-from dlroms import *
-from dodlib import DOD
 import torch
-
 from tqdm import tqdm
 import numpy as np
-from scipy.optimize import minimize
 from scipy.optimize import minimize_scalar
 import random
-
 
 def IdentityScaling(theta):
     """This function performs no transformation on the input. It is useful as a default scaling operator.
@@ -88,7 +83,7 @@ class LocalBasis():
         self.module.trainable = True
 
     def __call__(self, theta):
-        """Returns the basis related to a specific theta.
+        """Returns the basis related to a specific normalized theta.
         
         Input:
                 theta               (torch.Tensor)              Parameter vector to consider when computing the space.
@@ -126,6 +121,9 @@ class LocalBasis():
         """        
         if(j<0 or j>theta.size()[0]-1):
             raise RuntimeError("The given j is out of bound for the dimensions of theta")
+        # if the direction is not one the module is adaptive against, K is 0
+        if j not in self.p_prime_index_list:
+            return 0.0
         if(theta[j] < 0 or theta[j] > 1):
             raise RuntimeError("Theta hat should be normalized first")
         if(self._CheckH(theta[j], h)):
@@ -158,6 +156,9 @@ class LocalBasis():
         """ 
         if(j<0 or j>theta.size()[0]-1):
             raise RuntimeError("The given j is out of bound for the dimensions of theta")
+        # if the direction is not one the module is adaptive against, K is 0
+        if j not in self.p_prime_index_list:
+            return 0.0
         if(theta[j] < 0 or theta[j] > 1):
             raise RuntimeError("Theta hat should be normalized first")
 
@@ -186,14 +187,13 @@ class LocalBasis():
         
         theta_dataset = torch.rand(S, self.q)           
 
-        K_vector = []
+        K_values = []
 
-        for it in tqdm(range(S), disable=not verbose, desc="Monte Carlo Estimate progress"):
-            theta = theta_dataset[it].clone()
+        for theta in tqdm(theta_dataset, disable=not verbose, desc="Monte Carlo Estimate progress"):
             value = self.K_j_sup(j, theta)
-            K_vector.append(value)
+            K_values.append(value)
 
-        return np.mean(K_vector), np.std(K_vector)
+        return np.mean(K_values), np.std(K_values)
 
     # Private method
     # Monte Carlo estimate of K_j_h
@@ -205,22 +205,20 @@ class LocalBasis():
 
         theta_dataset = torch.rand(S, self.q)
 
-        K_vector = []
+        K_values = []
 
-        for it in tqdm(range(S), disable=not verbose, desc="Monte Carlo Estimate progress"):
-            theta = theta_dataset[it].clone()
-            
+        for theta in tqdm(theta_dataset, disable=not verbose, desc="Monte Carlo Estimate progress"):
             # We transform the j component of theta to ensure |h| < theta[j] < 1-|h|, so that 
             # we won't have errors while computing K_j_h
             theta[j] = theta[j] * (1-2*abs(h)) + abs(h)
 
             # We compute K_j_h 50% of the times in direction h, 50% in direction -h
             if random.choice([True, False]):
-                K_vector.append(self.K_j_h(j, theta, h))
+                K_values.append(self.K_j_h(j, theta, h))
             else:
-                K_vector.append(self.K_j_h(j, theta, -h))
+                K_values.append(self.K_j_h(j, theta, -h))
 
-        return np.mean(K_vector), np.std(K_vector)
+        return np.mean(K_values), np.std(K_values)
 
     # Public method
     # Wrapper for the two private methods
@@ -281,16 +279,23 @@ class LocalBasis():
         sensitivities = [] # one for each direction j
         tot_var = 0.0
 
-        tot_var = self._compute_spaces_variance(self.module(self.scaling(torch.rand(m*l, self.q)))).item()
+        params_tot_var = self.scaling(torch.rand(m*l, self.q))[:, self.p_prime_index_list]
+        tot_var = self._compute_spaces_variance(self.module(params_tot_var)).item()
 
-        for j in range(self.q): 
+        for j in range(self.q):
+            # if the direction is not one the module is adaptive against, the sensitivity is 0
+            if j not in self.p_prime_index_list:
+                sensitivities.append(0.0)
+                continue
+
             cond_var = 0.0
             variances = []
             for _ in tqdm(range(m), disable=not verbose, desc="Monte Carlo Estimate progress"):
                 th = torch.rand(1)
                 theta = torch.rand(l, self.q)
-                theta[:, self.p_prime_index_list[j]] = th
-                Vs = self.module(self.scaling(theta))
+                theta[:, j] = th
+                params = self.scaling(theta)[:, self.p_prime_index_list]
+                Vs = self.module(params)
                 variances.append(self._compute_spaces_variance(Vs))
             cond_var = np.mean(variances)
 
