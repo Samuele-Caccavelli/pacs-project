@@ -103,12 +103,12 @@ class LocalBasis():
 
     # K_h APPROACH
 
-    # Private method needed for K_h_j
+    # Private method needed for K_j_h
     def _CheckH(self, theta_j, h):
         # Checks if 0 <= theta_j + h <= 1
         return (h < -theta_j) and (h > 1-theta_j)
 
-    def K_h_j(self, j, theta, h=1e-1):
+    def K_j_h(self, j, theta, h=1e-1):
         """Returns the score K_j^h defined as
 
             K(theta) = metric(V_theta, V_theta_prime) / |h|
@@ -129,7 +129,7 @@ class LocalBasis():
         if(theta[j] < 0 or theta[j] > 1):
             raise RuntimeError("Theta hat should be normalized first")
         if(self._CheckH(theta[j], h)):
-            raise RuntimeError("The given h for the computation of K_h_j make theta go out of its space")
+            raise RuntimeError("The given h for the computation of K_j_h make theta go out of its space")
 
         theta_prime = theta.clone()
         theta_prime[j] += h
@@ -142,7 +142,7 @@ class LocalBasis():
 
         return distance / abs(h)
 
-    def K_sup_j(self, j, theta):
+    def K_j_sup(self, j, theta):
         """Returns the score K_j^sup defined as
 
             K(theta) = sup(metric(V_theta, V_theta_prime) / |h|)
@@ -162,8 +162,8 @@ class LocalBasis():
             raise RuntimeError("Theta hat should be normalized first")
 
         def objective(h):
-            # Attention here: we need to return -K_h_j
-            return -(self.K_h_j(j, theta, h))
+            # Attention here: we need to return -K_j_h
+            return -(self.K_j_h(j, theta, h))
 
         # Define bounds directly
         lower_bound = -theta[j].item()
@@ -178,39 +178,32 @@ class LocalBasis():
         return -result.fun
 
     # Private method
-    # Monte Carlo estimate of K_sup_j
-    def _K_sup_j_tot(self, j, S, verbose, theta_dataset):
-        if(theta_dataset is None):
-            if verbose:
-                print(S, "random values of the parameters will be generated for the Monte Carlo estimate")
-            theta_dataset = torch.rand(S, self.q)
-
-        else:
-            if verbose:
-                print(S, "non-random values of the parameters were given, those will be used for the Monte Carlo estimate")
-            S = theta_dataset.size()[0]            
+    # Monte Carlo estimate of K_j_sup
+    def _K_j_sup_tot(self, j, S, verbose, seed):
+        if seed is not None:
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+        
+        theta_dataset = torch.rand(S, self.q)           
 
         K_vector = []
 
         for it in tqdm(range(S), disable=not verbose, desc="Monte Carlo Estimate progress"):
             theta = theta_dataset[it].clone()
-            value = self.K_sup_j(j, theta)
+            value = self.K_j_sup(j, theta)
             K_vector.append(value)
 
         return np.mean(K_vector), np.std(K_vector)
 
     # Private method
-    # Monte Carlo estimate of K_h_j
-    def _K_h_j_tot(self, j, h, S, verbose, theta_dataset):
-        if(theta_dataset is None):
-            if verbose:
-                print(S, "random values of the parameters will be generated for the Monte Carlo estimate")
-            theta_dataset = torch.rand(S, self.q)
+    # Monte Carlo estimate of K_j_h
+    def _K_j_h_tot(self, j, h, S, verbose, seed):
+        if seed is not None:
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+            random.seed(seed)
 
-        else:
-            if verbose:
-                print(S, "non-random values of the parameters were given, those will be used for the Monte Carlo estimate")
-            S = theta_dataset.size()[0]
+        theta_dataset = torch.rand(S, self.q)
 
         K_vector = []
 
@@ -218,20 +211,20 @@ class LocalBasis():
             theta = theta_dataset[it].clone()
             
             # We transform the j component of theta to ensure |h| < theta[j] < 1-|h|, so that 
-            # we won't have errors while computing K_h_j
+            # we won't have errors while computing K_j_h
             theta[j] = theta[j] * (1-2*abs(h)) + abs(h)
 
-            # We compute K_h_j 50% of the times in direction h, 50% in direction -h
+            # We compute K_j_h 50% of the times in direction h, 50% in direction -h
             if random.choice([True, False]):
-                K_vector.append(self.K_h_j(j, theta, h))
+                K_vector.append(self.K_j_h(j, theta, h))
             else:
-                K_vector.append(self.K_h_j(j, theta, -h))
+                K_vector.append(self.K_j_h(j, theta, -h))
 
         return np.mean(K_vector), np.std(K_vector)
 
     # Public method
     # Wrapper for the two private methods
-    def K_j_tot(self, j, h=None, S=1000, verbose = False, theta_dataset = None):
+    def K_j_tot(self, j, h=None, S=1000, verbose = False, seed = None):
         """Returns the Monte Carlo estimate of score K_j^h or K_j^sup.
         
         Input:
@@ -242,15 +235,15 @@ class LocalBasis():
                                                             Defaults to 1e3.
                 verbose         (bool)                      When True, displays a progress bar during the Monte Carlo estimate.
                                                             Defaults to False.
-                theta_dataset   (torch.Tensor)              Tensor of parameter vectors to reproducibility of the estimate.
-                                                            Defaults to None - in this case a new dataset of size S is sampled.
+                seed            (int, optional)             Random seed for reproducibility.
+                                                            Defaults to None.
 
         Output:
-            (tuple of floats) Mean and standard deviation of the scores related to the theta_dataset used.      
+            (tuple of floats) Mean and standard deviation of the scores.      
         """ 
         if(h is None):
-            return self._K_sup_j_tot(j, S, verbose, theta_dataset)
-        return self._K_h_j_tot(j, h, S, verbose, theta_dataset)
+            return self._K_j_sup_tot(j, S, verbose, seed)
+        return self._K_j_h_tot(j, h, S, verbose, seed)
 
     # SENSITIVITY APPROACH
 
@@ -265,7 +258,7 @@ class LocalBasis():
 
         return (dist/2)/(l//2)
 
-    def sensitivity(self, m=30, l=20, verbose=False):
+    def sensitivity(self, m=30, l=20, verbose=False, seed=None):
         """Returns the sensitivity score for all directions of the parameter space.
         
         Input:
@@ -275,10 +268,16 @@ class LocalBasis():
                                                             Defaults to 20.
                 verbose         (bool)                      When True, displays a progress bar for the outer Monte Carlo estimate.
                                                             Defaults to False.
+                seed            (int, optional)             Random seed for reproducibility.
+                                                            Defaults to None.
 
         Output:
             (list of floats) Sensibility score for each direction.      
         """ 
+        if seed is not None:
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+        
         sensitivities = [] # one for each direction j
         tot_var = 0.0
 

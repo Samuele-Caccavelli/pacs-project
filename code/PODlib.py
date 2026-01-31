@@ -127,7 +127,7 @@ class weighted_POD:
         """
         self.trainable = True
 
-def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figsize=(16,16)):
+def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figsize=(8,8)):
     """Plots graphs needed to choose the right number of basis.
         
     Input:
@@ -142,8 +142,8 @@ def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figs
                                                             - 'trajectories'    : graph of the trajectories of the singular values for each theta.
                                                             - 'all'             : all of the above.
                                                             Defaults to 'all'.
-            figsize             (float, float)              Width and height of the plot in inches.
-                                                            Defaults to (16,16).
+            figsize             (tuple of floats, optional) Width and height of the plot in inches.
+                                                            Defaults to (8,8).                                              
     """    
     if(N_max is None):
         N_max = s_values.shape[1]
@@ -197,12 +197,14 @@ def n_choice_graphs(s_values, N_max=None, n_trajectories=None, which='all', figs
             ax.set_title('Trajectories')
             ax.grid(True)
 
-    ticks = np.arange(N_max//4) * 4 + 1
+    step = max(1, N_max // 8)
+
+    ticks = np.arange(1, N_max + 1, step)
     axes[-1].set_xticks(ticks)
     axes[-1].set_xticklabels(ticks)
+    axes[-1].tick_params(axis='x', rotation=45)
     axes[-1].set_xlabel('Number of basis')
 
     plt.tight_layout()
-    plt.show()
 
     return

@@ -1,0 +1,18 @@
+name: fenics-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Core Python version tested
+  - python=3.10
+  - pip
+  
+  # FEniCS, SciPy at a specific version, and utilities
+  - fenics
+  - scipy<1.12
+  - tqdm
+  - ipykernel           # For running Jupyter Notebooks
+
+  # Pip-only packages (dlroms at a given commit)
+  - pip:
+      - git+https://github.com/NicolaRFranco/dlroms.git@a84a2b7
