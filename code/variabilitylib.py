@@ -239,6 +239,9 @@ class LocalBasis():
         Output:
             (tuple of floats) Mean and standard deviation of the scores.      
         """ 
+        if j not in self.p_prime_index_list:
+            return 0.0, 0.0
+
         if(h is None):
             return self._K_j_sup_tot(j, S, verbose, seed)
         return self._K_j_h_tot(j, h, S, verbose, seed)
@@ -263,6 +266,7 @@ class LocalBasis():
                 m               (int)                       Monte Carlo estimate sample size for the approximation of E[Var(V_theta|theta_j)].
                                                             Defaults to 30.
                 l               (int)                       Monte Carlo estimate sample size for the approximation of Var(V_theta|theta_j=theta_j^(k)).
+                                                            If a value less then 2 is given, an error is risen.
                                                             Defaults to 20.
                 verbose         (bool)                      When True, displays a progress bar for the outer Monte Carlo estimate.
                                                             Defaults to False.
@@ -272,6 +276,9 @@ class LocalBasis():
         Output:
             (list of floats) Sensibility score for each direction.      
         """ 
+        if l < 2:
+            raise ValueError(f"Inner sample size 'l' must be at least 2 to compute variance.")
+
         if seed is not None:
             torch.manual_seed(seed)
             np.random.seed(seed)
