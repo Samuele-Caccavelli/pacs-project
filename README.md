@@ -61,3 +61,21 @@ Once the full notebook has been run, you will have:
 
 * **The expected results**, provided in the notebook itself;
 * **An automatic check**, that looks at the computed scores and checks if they are physically consistent.
+
+## Folder structure
+```
+pacs-project/
+├── code/                   # Contains source code for the DOD and the newly implemented modules
+├── data/                   # Contains dataset and relative meshes
+├── notebooks/              # Contains notebooks that carry out the complete pipelines
+│   ├── pipeline_gaussian.ipynb       # Notebook with the pipeline for the Gaussian test case
+│   ├── pipeline_nstokes.ipynb        # Notebook with the pipeline for the Navier-Stokes test case
+│   └── dod_compatibility.ipynb       # Notebook to show compatibility between new and old classes
+├── plots/                  # Destination folder for all visual outputs
+├── results/                # Destination folder for all trained DOD models
+│   └── Test_DOD.npz                  # Trained DOD modeled
+├── test/                   # Contains the test notebook
+│   └── minimal_working_example.ipynb # Notebook with a test to be run
+├── data_setup.py           # Datasets set up file
+└── environment.yml         # Environment set up file
+```
