@@ -62,6 +62,13 @@ Once the full notebook has been run, you will have:
 * **The expected results**, provided in the notebook itself;
 * **An automatic check**, that looks at the computed scores and checks if they are physically consistent.
 
+## Notebooks overview
+We provide three main notebooks to reproduce results and verify the architecture:
+
+* `pipeline_gaussian.ipynb`: Runs the complete analysis pipeline on the synthetic Gaussian test case. It validates the mathematical consistency of the proposed scores.
+* `pipeline_nstokes.ipynb`: Runs the complete analysis pipeline on the Navier-Stokes test case. It identifies the optimal parameter partitioning for the time-dependent fluid flow.
+* `dod_compatibility.ipynb`: Demonstrates the compatibility between the newly implemented classes and the `DOD` class.
+
 ## Folder structure
 ```
 pacs-project/
@@ -74,7 +81,7 @@ pacs-project/
 │   ├── pipeline_nstokes.ipynb        # Notebook with the pipeline for the Navier-Stokes test case
 │   └── dod_compatibility.ipynb       # Notebook to show compatibility between new and old classes
 ├── results/                # Destination folder for all trained DOD models
-│   └── Test_DOD.npz                  # Trained DOD modeled
+│   └── Test_DOD.npz                  # Trained DOD model
 ├── test/                   # Contains the test notebook
 │   └── minimal_working_example.ipynb # Notebook with a test to be run
 ├── README.md               # README file

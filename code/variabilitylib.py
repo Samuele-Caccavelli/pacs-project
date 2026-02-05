@@ -40,11 +40,11 @@ class LocalBasis():
     
     Attributes:
             q                   (int)                       Dimensions of the parameter space.
-            p_prime_index_list  (list of int)               List of indexes corresponding to the bad parameters.
+            p_prime_index_list  (list of int)               List of indexes corresponding to the parameters in the μ set.
             module              (function)                  A map from Θ to R^(n_basis, nA).
                                                             It must have the signature:
                                                                 module(theta: torch.Tensor) -> torch.Tensor
-            scaling             (function)                  A map from [0,1]^q to Θ * Θ'.
+            scaling             (function)                  A map from [0,1]^q to Θ.
                                                             It must have the signature:
                                                                 scaling(theta: torch.Tensor) -> torch.Tensor
             metric              (function)                  Function between two basis spaces to compute a metric returned as a scalar tensor.
@@ -57,11 +57,11 @@ class LocalBasis():
         
         Attributes:
                 q                   (int)                       Dimensions of the parameter space.
-                p_prime_index_list  (list of int)               List of indexes corresponding to the bad parameters.
+                p_prime_index_list  (list of int)               List of indexes corresponding to the parameters in the μ set.
                 module              (function)                  A map from Θ to R^(n_basis, nA).
                                                                 It must have the signature:
                                                                     module(theta: torch.Tensor) -> torch.Tensor
-                scaling             (function)                  A map from [0,1]^q to Θ * Θ'.
+                scaling             (function)                  A map from [0,1]^q to Θ.
                                                                 It must have the signature:
                                                                     scaling(theta: torch.Tensor) -> torch.Tensor
                                                                 Defaults to `IdentityScaling`
@@ -77,7 +77,7 @@ class LocalBasis():
         self.scaling = scaling
         self.metric = metric
 
-        # We freeze the module, so that it is not anymore trainable (needed for module based on Neural Networks)
+        # We freeze the module, so that it is not anymore trainable (needed for module based on neural networks)
         # We then set its `trainable` attribute to True so that we will work in the ambient space
         self.module.freeze()
         self.module.trainable = True
@@ -92,7 +92,7 @@ class LocalBasis():
                 (torch.Tensor) Basis related to a specific theta. If `trainable` is set to True, the basis returned refers to the ambient space, otherwise it refers to the full space.
         """
         # Here we are considering a theta inside [0,1]^q
-        # So we first rescale it to be inside Θ * Θ', then we compute the basis
+        # So we first rescale it to be inside Θ, then we compute the basis
         params = self.scaling(theta)
         return self.module(params[self.p_prime_index_list].unsqueeze(0)).squeeze()
 
@@ -120,14 +120,14 @@ class LocalBasis():
             (float) Value of the score.      
         """        
         if(j<0 or j>theta.size()[0]-1):
-            raise RuntimeError("The given j is out of bound for the dimensions of theta")
-        # if the direction is not one the module is adaptive against, K is 0
+            raise RuntimeError("The given j is out of bound for the dimensions of theta.")
+        # If the direction is not one the module is adaptive against, K is 0
         if j not in self.p_prime_index_list:
             return 0.0
         if(theta[j] < 0 or theta[j] > 1):
-            raise RuntimeError("Theta hat should be normalized first")
+            raise RuntimeError("Theta hat should be normalized first.")
         if(self._CheckH(theta[j], h)):
-            raise RuntimeError("The given h for the computation of K_j_h make theta go out of its space")
+            raise RuntimeError("The given h for the computation of K_j_h make theta go out of its space.")
 
         theta_prime = theta.clone()
         theta_prime[j] += h
@@ -155,12 +155,12 @@ class LocalBasis():
             (float) Value of the score.      
         """ 
         if(j<0 or j>theta.size()[0]-1):
-            raise RuntimeError("The given j is out of bound for the dimensions of theta")
-        # if the direction is not one the module is adaptive against, K is 0
+            raise RuntimeError("The given j is out of bound for the dimensions of theta.")
+        # If the direction is not one the module is adaptive against, K is 0
         if j not in self.p_prime_index_list:
             return 0.0
         if(theta[j] < 0 or theta[j] > 1):
-            raise RuntimeError("Theta hat should be normalized first")
+            raise RuntimeError("Theta hat should be normalized first.")
 
         def objective(h):
             # Attention here: we need to return -K_j_h
@@ -283,7 +283,7 @@ class LocalBasis():
             torch.manual_seed(seed)
             np.random.seed(seed)
         
-        sensitivities = [] # one for each direction j
+        sensitivities = []
         tot_var = 0.0
 
         params_tot_var = self.scaling(torch.rand(m*l, self.q))[:, self.p_prime_index_list]
@@ -306,7 +306,7 @@ class LocalBasis():
                 variances.append(self._compute_spaces_variance(Vs))
             cond_var = np.mean(variances)
 
-            # we use this max because if m and l are too small, the tot_var could end up being smaller then a cond_var
+            # We use this max because if m and l are too small, the tot_var could end up being smaller then a cond_var
             # so the sensitivity could end up being negative
             sensitivities.append(max(0, 1 - cond_var/tot_var))
 
