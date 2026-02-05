@@ -65,17 +65,19 @@ Once the full notebook has been run, you will have:
 ## Folder structure
 ```
 pacs-project/
-├── code/                   # Contains source code for the DOD and the newly implemented modules
+├── code/                   # Contains source code for the newly implemented modules
+│   ├── PODlib.py                     # Source code for the weighted_POD class
+│   └── variabilitylib.py             # Source code for the LocalBasis class
 ├── data/                   # Contains dataset and relative meshes
 ├── notebooks/              # Contains notebooks that carry out the complete pipelines
 │   ├── pipeline_gaussian.ipynb       # Notebook with the pipeline for the Gaussian test case
 │   ├── pipeline_nstokes.ipynb        # Notebook with the pipeline for the Navier-Stokes test case
 │   └── dod_compatibility.ipynb       # Notebook to show compatibility between new and old classes
-├── plots/                  # Destination folder for all visual outputs
 ├── results/                # Destination folder for all trained DOD models
 │   └── Test_DOD.npz                  # Trained DOD modeled
 ├── test/                   # Contains the test notebook
 │   └── minimal_working_example.ipynb # Notebook with a test to be run
+├── README.md               # README file
 ├── data_setup.py           # Datasets set up file
 └── environment.yml         # Environment set up file
 ```

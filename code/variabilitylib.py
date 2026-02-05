@@ -222,7 +222,7 @@ class LocalBasis():
 
     # Public method
     # Wrapper for the two private methods
-    def K_j_tot(self, j, h=None, S=1000, verbose = False, seed = None):
+    def K_j_tot(self, j, h=None, S=100, verbose = False, seed = None):
         """Returns the Monte Carlo estimate of score K_j^h or K_j^sup.
         
         Input:
@@ -230,7 +230,7 @@ class LocalBasis():
                 h               (float, optional)           Magnitude of the displacement to compute K_j^h.
                                                             Defaults to None - in this case, the computed value will be K_j^sup.
                 S               (int)                       Monte Carlo estimate sample size.
-                                                            Defaults to 1e3.
+                                                            Defaults to 100.
                 verbose         (bool)                      When True, displays a progress bar during the Monte Carlo estimate.
                                                             Defaults to False.
                 seed            (int, optional)             Random seed for reproducibility.
