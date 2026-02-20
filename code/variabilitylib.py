@@ -101,7 +101,7 @@ class LocalBasis():
     # Private method needed for K_j_h
     def _CheckH(self, theta_j, h):
         # Checks if 0 <= theta_j + h <= 1
-        return (h < -theta_j) and (h > 1-theta_j)
+        return (h < -theta_j) or (h > 1-theta_j)
 
     def K_j_h(self, j, theta, h=1e-1):
         """Returns the score K_j^h defined as
